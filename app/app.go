@@ -85,6 +85,25 @@ func GetApp() *cli.App {
 				},
 			},
 		},
+
+		{
+			Name:  "products",
+			Usage: "Product Related Tools",
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:     "org",
+					Required: true,
+				},
+			},
+			Subcommands: []cli.Command{
+				{
+					Name:      "list",
+					ShortName: "ls",
+					Usage:     "List Products",
+					Action:    commands.ListProducts,
+				},
+			},
+		},
 	}
 
 	return app
