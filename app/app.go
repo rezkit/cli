@@ -69,6 +69,20 @@ func GetApp() *cli.App {
 					Action:    commands.ListOrganizations,
 					Usage:     "List available organizations",
 				},
+
+				{
+					Name:      "show",
+					Action:    commands.ShowOrganization,
+					Usage:     "Get Organization",
+					ArgsUsage: "<id>",
+				},
+
+				{
+					Name:      "users",
+					Action:    commands.ListUsers,
+					Usage:     "List Organization Users",
+					ArgsUsage: "<id>",
+				},
 			},
 		},
 	}

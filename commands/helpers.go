@@ -90,5 +90,41 @@ func printTable(data interface{}) {
 		}
 	}
 
+	if ref.Kind() == reflect.Struct {
+		for i := 0; i < ref.NumField(); i++ {
+			field := ref.Field(i)
+
+			value := reflect.ValueOf(data)
+
+			switch field.Type.Kind() {
+			case reflect.String:
+				fmt.Fprintf(tw, "%s\t%s\n", field.Name, value.FieldByName(field.Name).String())
+				break
+			case reflect.Int, reflect.Int8, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint32, reflect.Uint64:
+				fmt.Fprintf(tw, "%s\t%d\n", field.Name, value.FieldByName(field.Name).Int())
+				break
+			case reflect.Slice:
+				elemType := field.Type.Elem()
+
+				switch elemType.Kind() {
+				// []string
+				case reflect.String:
+					values := make([]string, value.Len())
+
+					for is := 0; i < value.Len(); is++ {
+						values[is] = value.Index(is).String()
+					}
+
+					fmt.Fprintf(tw, "%s\t%s\n", field.Name, strings.Join(values, "\n"))
+
+					break
+				}
+			default:
+				fmt.Fprintf(tw, "%s\t%v\n", field.Name, value.Field(i))
+			}
+		}
+	}
+
 	tw.Flush()
 }
