@@ -1,3 +1,5 @@
+name: CI Workflow
+
 on:
   push: ~
 
@@ -11,7 +13,7 @@ jobs:
           - linux
         GOARCH:
           - arm64
-          - x64
+          - amd64
           - "386"
           - s390x
           - mips
@@ -40,3 +42,9 @@ jobs:
         env:
           GOOS: ${{matrix.GOOS}}
           GOARCH: ${{matrix.GOARCH}}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: rezkit.${{matrix.GOOS}}.${{matrix.GOARCH}}
+          path: rezkit
