@@ -1,0 +1,23 @@
+on:
+  push: ~
+
+jobs:
+  compile:
+    runs-on: ubuntu-22.04
+    name: Compile
+    strategy:
+      matrix:
+        GOOS:
+          - windows
+          - linux
+          - darwin
+        GOARCH:
+          - aarch64
+          - x64
+          - i386
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build
+        run: go build -o rezkit
