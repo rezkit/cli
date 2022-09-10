@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/rezkit/cli/internal/config"
 	"github.com/urfave/cli"
 )
 
@@ -20,6 +20,14 @@ const (
 type loginResponse struct {
 	AuthURL   string `json:"url"`
 	SessionID string `json:"id"`
+}
+
+type oAuthResponse struct {
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	TokenType    string `json:"token_type"`
+	Scope        string `json:"scope"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func authServiceUrl() string {
@@ -48,35 +56,60 @@ func Login(cli *cli.Context) error {
 	fmt.Println("Attempting to open browser to authenticate")
 
 	if runtime.GOOS == "linux" {
-		os.StartProcess("xdg-open", []string{response.AuthURL}, nil)
+		os.StartProcess("xdg-open", []string{response.AuthURL}, &os.ProcAttr{})
 	}
 
 	fmt.Println("Please visit this URL to authenticate: ", response.AuthURL)
 
 	ticker := time.NewTicker(2 * time.Second)
 
-	go func() {
-		for attempts := 0; attempts < MaxAttempts; attempts++ {
-			// Wait for the ticker...
-			<-ticker.C
+	fmt.Println("Waiting for Authentication")
 
-			resp, err := http.Get(authServiceUrl() + "/token?id=" + response.SessionID)
+	tokenData := oAuthResponse{}
+	attempts := 0
 
-			if err != nil {
+	for attempts = 0; attempts < MaxAttempts; attempts++ {
+		// Wait for the ticker...
+		<-ticker.C
+
+		fmt.Println("Checking auth state")
+
+		resp, e := http.Get(authServiceUrl() + "/token?id=" + response.SessionID)
+
+		if e != nil {
+			err = e
+			break
+		}
+
+		if resp.StatusCode == 200 {
+
+			if e := json.NewDecoder(resp.Body).Decode(&tokenData); err != nil {
+				err = e
 				break
 			}
 
-			if resp.StatusCode == 200 {
-
+			if tokenData.AccessToken != "" {
+				break
 			}
 		}
-	}()
+	}
 
-	fmt.Println("Waiting for Authentication")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Unable to authenticate. Please try again")
+		return err
+	}
+
+	if attempts >= MaxAttempts {
+		fmt.Fprintln(os.Stderr, "Authentication timed out after", MaxAttempts, "attempts.")
+		return nil
+	}
+
+	expires := time.Now().Add(time.Duration(tokenData.ExpiresIn) * time.Second)
+
+	// Store the auth data in the config
+	config.GetConfig().Set("authentication.access_token", tokenData.AccessToken)
+	config.GetConfig().Set("authentication.refresh_token", tokenData.RefreshToken)
+	config.GetConfig().Set("authentication.expires", expires)
 
 	return nil
-}
-
-func getTokens(ctx context.Context) {
-
 }
